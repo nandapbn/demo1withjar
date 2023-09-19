@@ -1,38 +1,46 @@
-name: selenoid start
+name: start selenoid
 
-on: 
-  push:
-    branches-ignore:
-    - '!master' # Push events to branches matching allure-report
-    paths-ignore:
-    - 'docs/**'
-
+on: workflow_dispatch
 jobs:
-  tests:
+  run-web-test:
     runs-on: ubuntu-latest
-    name: Run WDIO tests
+
     steps:
-    - name: Start Selenoid Server
-      uses: Xotabu4/selenoid-github-action@v2
-    - uses: actions/checkout@v1
-    - name: Run test
-      env:
-        SELENIUM_HUB_HOST: 'localhost'
-      run: npm cit  
-    - name: Create Report
-      if: always()
-      # trying to save history of previous runs if it is exists
-      run: cp -r $(pwd)/docs/history/. $(pwd)/allure-results/history || true && npm run report
-    - uses: actions/upload-artifact@v1
-      if: always()
-      with:
-        name: allure-report
-        path: ./allure-report
-    - name: Deploy report
-      uses: JamesIves/github-pages-deploy-action@3.1.0
-      if: always()
-      with:
-        ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        BRANCH: master # The branch the action should deploy to.
-        FOLDER: allure-report # The folder the action should deploy.
-        TARGET_FOLDER: docs
+      - name: pull the project in to the runner
+        uses: actions/checkout@v3
+
+      - name: set  up java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: store docker image cache
+        uses: satackey/action-docker-layer-caching@v0.0.11
+        continue-on-error: true
+
+      - name: Start Selenoid server
+        uses: n-ton4/selenoid-github-action@master
+        id: start-selenoid
+        continue-on-error: false
+        with:
+          version: 1.10.1
+          args: -limit 5
+          browsers: chrome
+          last-versions: 1
+
+      - name: Restore Maven cache
+        uses: skjolber/maven-cache-github-action@v1
+        continue-on-error: true
+        with:
+          step: restore
+
+      - name: run the web test
+        run: |
+          mvn clean test -Pweb -Dusername=${{secrets.USERNAME}}
+
+      - name: Save Maven cache
+        uses: skjolber/maven-cache-github-action@v1
+        continue-on-error: true
+        with:
+          step: save
