@@ -39,7 +39,7 @@ jobs:
 
       - name: run the web test
         run: |
-          mvn clean test .
+          mvn clean test -Pweb -Dusername=${{secrets.USERNAME}} 
 
       - name: Save Maven cache
         uses: skjolber/maven-cache-github-action@v1
