@@ -1,4 +1,4 @@
-name: start selenoid2
+name: start selenoid3
 
 on: workflow_dispatch
 jobs:
